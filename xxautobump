@@ -6,15 +6,15 @@
 # depends on: xtools/{xgensum,xlint,xdistdir}
 
 if [ "$#" -lt 1 ] ; then
-	printf "Usage: $(basename "$0") PKG...\n" 2>&1
+	printf 'Usage: %s PKG...\n' "$(basename "$0")" 2>&1
 	exit 1
 fi
 
-cd "$(xdistdir)"
+cd "$(xdistdir)" || exit 1
 
 # make sure all templates exist
 fail=
-for pkg in $* ; do
+for pkg in "$@" ; do
 	t="srcpkgs/${pkg}/template"
 	if [ ! -f "$t" ] ; then
 		printf 'ERROR: template does not exist: %s\n' "$t" 2>&1
@@ -25,11 +25,11 @@ done
 
 # patch templates
 pkgs=
-for pkg in $* ; do
+for pkg in "$@" ; do
 	t="srcpkgs/$pkg/template"
 
 	newversion=
-	newversion="$(./xbps-src update-check "$pkg" | cut -d' ' -f3 | sort | tail -n1 | sed "s/${pkg}-//" )"
+	newversion="$(./xbps-src update-check "$pkg" | cut -d' ' -f3 | sort | tail -n1 | sed "s/${pkg}-//")"
 	if [ -z "$newversion" ] ; then
 		printf -- 'No pending update for %s\n' "$pkg"
 		continue
@@ -41,6 +41,4 @@ for pkg in $* ; do
 		-e "/^revision=/s/=.*/=1/" \
 		-e "/^version=/s/=.*/=$newversion/"
 	xgensum -i "$t"
-
-	xlint "$t" || :
 done
