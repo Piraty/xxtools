@@ -1,0 +1,46 @@
+#!/bin/sh
+# xxautobump PKG.. - auto-bump package templates
+
+# Perform trivial updates to given templates.
+#
+# depends on: xtools/{xgensum,xlint,xdistdir}
+
+if [ "$#" -lt 1 ] ; then
+	printf "Usage: $(basename "$0") PKG...\n" 2>&1
+	exit 1
+fi
+
+cd "$(xdistdir)"
+
+# make sure all templates exist
+fail=
+for pkg in $* ; do
+	t="srcpkgs/${pkg}/template"
+	if [ ! -f "$t" ] ; then
+		printf 'ERROR: template does not exist: %s\n' "$t" 2>&1
+		fail=1
+	fi
+done
+[ -n "$fail" ] && exit 1
+
+# patch templates
+pkgs=
+for pkg in $* ; do
+	t="srcpkgs/$pkg/template"
+
+	newversion=
+	newversion="$(./xbps-src update-check "$pkg" | cut -d' ' -f3 | sort | tail -n1 | sed "s/${pkg}-//" )"
+	if [ -z "$newversion" ] ; then
+		printf -- 'No pending update for %s\n' "$pkg"
+		continue
+	fi
+	pkgs="$pkgs $pkg"
+
+	printf -- 'Updating package: %s -> %s\n' "$pkg" "$newversion"
+	sed -i "$t" \
+		-e "/^revision=/s/=.*/=1/" \
+		-e "/^version=/s/=.*/=$newversion/"
+	xgensum -i "$t"
+
+	xlint "$t" || :
+done
