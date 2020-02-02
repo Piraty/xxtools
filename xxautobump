@@ -1,7 +1,6 @@
 #!/bin/sh
-# xxautobump PKG.. - auto-bump package templates
+# xxautobump PKG.. - perform trivial updates on given templates
 
-# Perform trivial updates to given templates.
 # depends on: xtools/{xgensum,xdistdir}
 
 if [ "$#" -lt 1 ] ; then
@@ -12,27 +11,35 @@ fi
 cd "$(xdistdir)" || exit 1
 
 # make sure all templates exist
+templates=
 fail=
 for pkg in "$@" ; do
-	t="srcpkgs/${pkg}/template"
-	if [ ! -f "$t" ] ; then
-		printf 'ERROR: template does not exist: %s\n' "$pkg" 2>&1
+	if [ -f "srcpkgs/$pkg/template" ] ; then
+		t="srcpkgs/$pkg/template"
+	elif [ -f "$pkg/template" ] ; then
+		t="$pkg/template"
+	elif [ -f "$pkg" ] ; then
+		t="$pkg"
+	else
+		printf 'ERROR: could not find template for: %s\n' "$pkg" 2>&1
 		fail=1
+		continue
 	fi
+	templates="$templates $t"
 done
 [ -n "$fail" ] && exit 1
 
 # patch templates
-for pkg in "$@" ; do
-	t="srcpkgs/$pkg/template"
-
-	newversion=
+for t in $templates ; do
+	pkg="$(printf '%s' "$t" | cut -d/ -f2)"
 	newversion="$(./xbps-src update-check "$pkg" | sort | tail -n1 | cut -d' ' -f3 | sed "s/${pkg}-//")"
 	[ -z "$newversion" ] && continue
 
+	printf -- 'Updating package: %s -> %s' "$pkg" "$newversion"
 	sed -i "$t" \
 		-e "/^revision=/s/=.*/=1/" \
 		-e "/^version=/s/=.*/=$newversion/"
 	xgensum -i "$t" >/dev/null 2>&1 && \
-		printf -- 'Updated package: %s -> %s\n' "$pkg" "$newversion"
+	printf -- ' ok\n' || \
+		printf -- ' failed\n'
 done
