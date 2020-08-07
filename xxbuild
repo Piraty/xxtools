@@ -1,0 +1,40 @@
+#!/bin/sh
+# build packages for a pre-defined set of archs
+
+cd "$(xdistdir)" || exit 1
+
+flags=
+for arg in $@ ; do
+	case "$arg" in
+		-*)
+			flags="$flags $arg"
+			shift
+			;;
+		*) break ;;
+	esac
+done
+
+pkgs="$@"
+[ -z "$pkgs" ] && exit 1
+
+cd "$(xdistdir)" || exit 1
+
+export XBPS_HOSTDIR=hostdir.xxbuild
+export XBPS_MASTERDIR=masterdir.xxbuild
+./xbps-src binary-bootstrap
+./xbps-src clean
+./xbps-src bootstrap-update
+
+for arch in "" "-a aarch64-musl" "-a armv7l" ; do
+	# mimic xbulk but check the returncode
+	#xbulk $flags $(./xbps-src sort-dependencies $pkgs #NO, we can't filter retcode2
+	for pkg in $(./xbps-src sort-dependencies $pkgs ) ; do
+		./xbps-src $flags $arch pkg $pkg
+		ret=$?
+
+		#fail for everything but 2 (nocross, broken, no match in archs)
+		if [ $ret -ne 2 ] && [ $ret -ne 0 ] ; then
+			exit $ret
+		fi
+	done
+done
