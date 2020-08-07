@@ -32,10 +32,11 @@ done
 # patch templates
 for t in $templates ; do
 	pkg="$(printf '%s' "$t" | cut -d/ -f2)"
+	oldversion="$(./xbps-src show "$pkg" | grep version | cut -f2)"
 	newversion="$(./xbps-src update-check "$pkg" | sort | tail -n1 | cut -d' ' -f3 | sed "s/${pkg}-//")"
 	[ -z "$newversion" ] && continue
 
-	printf -- 'Updating package: %s -> %s' "$pkg" "$newversion"
+	printf -- 'Updating package: %s %s -> %s' "$pkg" "$oldversion" "$newversion"
 	sed -i "$t" \
 		-e "/^revision=/s/=.*/=1/" \
 		-e "/^version=/s/=.*/=$newversion/"
