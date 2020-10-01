@@ -1,0 +1,49 @@
+#!/bin/sh
+# xxadopt [-f] PKG.. - adopt packages
+
+[ "$1" = "-f" ] && _force=1 && shift || _force=0
+
+if [ "$#" -lt 1 ] ; then
+	printf 'Usage: %s [-f] PKG..\n' "$(basename "$0")" >&2
+	exit 1
+fi
+
+cd "$(xdistdir)" || exit 1
+
+# make sure all templates exist
+templates=
+fail=
+for pkg in "$@" ; do
+	if [ -f "srcpkgs/$pkg/template" ] ; then
+		t="srcpkgs/$pkg/template"
+	elif [ -f "$pkg/template" ] ; then
+		t="$pkg/template"
+	elif [ -f "$pkg" ] ; then
+		t="$pkg"
+	else
+		printf 'ERROR: could not find template for: %s\n' "$pkg" 2>&1
+		fail=1
+		continue
+	fi
+	templates="$templates $t"
+done
+[ -n "$fail" ] && exit 1
+
+# patch templates
+for t in $templates ; do
+	pkg="$(printf '%s' "$t" | cut -d/ -f2)"
+
+	if [ "$_force" = "0" ] && ! grep -q -i "^maintainer=.*orphan@voidlinux.*" "$t" ; then
+		printf -- 'Skipping package (not orphaned): %s\n' "$pkg" >&2
+		continue
+	fi
+
+	hash_pre="$(md5sum "$t")"
+	sed -i "$t" \
+		-e "/^maintainer=/s/=.*/=\"$(git config user.name) <$(git config user.email)>\"/"
+	hash_post="$(md5sum "$t")"
+
+	[ "$hash_pre" != "$hash_post" ] && \
+		printf -- 'Package adopted: %s\n' "$pkg" || \
+			printf -- 'Package remains unchanged: %s\n' "$pkg" >&2
+done
