@@ -1,10 +1,13 @@
 #!/bin/sh
-# build packages for a pre-defined set of archs
+# xxbuild [flags] [pkgs..] - build packages for a pre-defined set of archs
 
 cd "$(xdistdir)" || exit 1
 
+: "${XBPS_HOSTDIR:="$HOME/.cache/xxbuild/hostdir"}"
+: "${XBPS_MASTERDIR:="$(pwd)/masterdir.xxbuild"}"
+
 flags=
-for arg in $@ ; do
+for arg in $@; do
 	case "$arg" in
 		-*)
 			flags="$flags $arg"
@@ -14,27 +17,36 @@ for arg in $@ ; do
 	esac
 done
 
-pkgs="$@"
-[ -z "$pkgs" ] && exit 1
+# if no packages are given, build changed templates commited on this branch
+if [ "$#" -lt 1 ]; then
+	rm -f /tmp/templates
+	common/travis/changed_templates.sh &&
+		set -- $(cat /tmp/templates)
+fi
+pkgs=$(./xbps-src sort-dependencies "$@")
+[ -n "$pkgs" ] || exit 1
 
-cd "$(xdistdir)" || exit 1
+mkdir -p "$XBPS_HOSTDIR" "$XBPS_MASTERDIR"
+export XBPS_HOSTDIR
+export XBPS_MASTERDIR
 
-export XBPS_HOSTDIR=hostdir.xxbuild
-export XBPS_MASTERDIR=masterdir.xxbuild
 ./xbps-src binary-bootstrap
 ./xbps-src clean
 ./xbps-src bootstrap-update
 
-for arch in "" "-a aarch64-musl" "-a armv7l" ; do
+for arch in "" "-a aarch64-musl" "-a armv7l"; do
 	# mimic xbulk but check the returncode
-	#xbulk $flags $(./xbps-src sort-dependencies $pkgs #NO, we can't filter retcode2
-	for pkg in $(./xbps-src sort-dependencies $pkgs ) ; do
+	#xbulk $flags $(./xbps-src sort-dependencies $pkgs #NO, we can't filter retcode
+	for pkg in $pkgs; do
 		./xbps-src $flags $arch pkg $pkg
 		ret=$?
-
-		#fail for everything but 2 (nocross, broken, no match in archs)
-		if [ $ret -ne 2 ] && [ $ret -ne 0 ] ; then
-			exit $ret
-		fi
+		case "$ret" in
+			0) : ;;
+			2) : ;; # nocross, broken, no match in `archs=`
+			*)
+				printf '+++ %s\n' "pkg: $pkg" "arch: ${arch:-(native)}" >&2
+				exit $ret
+				;;
+		esac
 	done
 done
