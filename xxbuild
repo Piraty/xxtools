@@ -1,29 +1,49 @@
 #!/bin/sh
 # xxbuild [flags] [pkgs..] - build packages for a pre-defined set of archs
 
-cd "$(xdistdir)" || exit 1
+can_build_natively_for_arch() {
+	arch="$1"
+	native=
+	case "$(uname -m)" in
+		x86_64)
+			case "$arch" in
+				i686* | x86_64*) native=y ;;
+			esac
+			;;
+		aarch64)
+			case "$arch" in
+				armv7* | aarch64*) native=y ;;
+			esac
+			;;
+	esac
+	[ "$native" = "y" ] && return 0 || return 1
+}
 
 : "${XBPS_HOSTDIR:="$HOME/.cache/xxbuild/hostdir"}"
 : "${XBPS_MASTERDIR:="$(pwd)/masterdir.xxbuild"}"
 
-flags=
-for arg in $@; do
+xbps_src_flags=
+xxbuild_force=
+pkgs=
+for arg; do
 	case "$arg" in
-		-*)
-			flags="$flags $arg"
-			shift
-			;;
+		-f) xxbuild_force=y ;;
+		-*) : ;;
 		*) break ;;
 	esac
+	xbps_src_flags="$xbps_src_flags $arg"
+	shift
 done
 
-# if no packages are given, build changed templates commited on this branch
-if [ "$#" -lt 1 ]; then
+cd "$(xdistdir)" || exit 1
+
+if [ "$#" = "0" ]; then
+	# if no packages are given, build changed templates commited on this branch
 	rm -f /tmp/templates
 	common/travis/changed_templates.sh &&
-		set -- $(cat /tmp/templates)
+		set -- "$(cat /tmp/templates)"
 fi
-pkgs=$(./xbps-src sort-dependencies "$@")
+pkgs="$*"
 [ -n "$pkgs" ] || exit 1
 
 mkdir -p "$XBPS_HOSTDIR" "$XBPS_MASTERDIR"
@@ -34,17 +54,49 @@ export XBPS_MASTERDIR
 ./xbps-src clean
 ./xbps-src bootstrap-update
 
-for arch in "" "-a aarch64-musl" "-a armv7l"; do
-	# mimic xbulk but check the returncode
-	#xbulk $flags $(./xbps-src sort-dependencies $pkgs #NO, we can't filter retcode
-	for pkg in $pkgs; do
-		./xbps-src $flags $arch pkg $pkg
+# clean binpkgs, to not spoil the result by reusing prebuilt packages
+if [ -n "$xxbuild_force" ]; then
+	rm -rf "$XBPS_HOSTDIR/binpkgs"
+fi
+
+for arch in \
+	"x86_64" "x86_64-musl" "i686" \
+	"aarch64-musl" \
+	"armv7l-musl" "armv6l-musl"; do
+
+	if can_build_natively_for_arch "$arch"; then
+		cross=n
+		master_arch="$arch"
+		xbps_src_cross_flags=
+	else
+		cross=y
+		master_arch="$(xbps-uhelper arch)"
+		xbps_src_cross_flags="-a $arch"
+	fi
+	# rebuild masterdir for native archs
+	if [ "$(cat "$XBPS_MASTERDIR/.xbps_chroot_init")" != "$master_arch" ]; then
+		rm -rf "$XBPS_MASTERDIR"
+		./xbps-src binary-bootstrap "$master_arch"
+	fi
+
+	# mimic xbulk, but check exit code to not fail on broken/nocross
+	# `xbulk $xbps_src_flags -f $cross $(./xbps-src sort-dependencies $@)`
+	for pkg in $(./xbps-src sort-dependencies "$pkgs"); do
+		(
+			set -x
+			#shellcheck disable=SC2086
+			./xbps-src $xbps_src_flags $xbps_src_cross_flags pkg "$pkg"
+		)
 		ret=$?
+
 		case "$ret" in
 			0) : ;;
 			2) : ;; # nocross, broken, no match in `archs=`
 			*)
-				printf '+++ %s\n' "pkg: $pkg" "arch: ${arch:-(native)}" >&2
+				printf '%s\n' \
+					"+++" \
+					"FAILED TO BUILD: $pkg (${arch}, cross:${cross})" \
+					"+++" >&2
 				exit $ret
 				;;
 		esac
