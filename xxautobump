@@ -1,46 +1,69 @@
 #!/bin/sh
 # xxautobump PKG.. - perform trivial updates on given templates
 
-# depends on: xtools/{xgensum,xdistdir}
-
-if [ "$#" -lt 1 ] ; then
-	printf 'Usage: %s PKG...\n' "$(basename "$0")" 2>&1
-	exit 1
-fi
+# stdout: list of successfully bumped packages
+# stderr: auxiliary information about the bumping process
 
 cd "$(xdistdir)" || exit 1
 
-# make sure all templates exist
+# ensure all templates exist
 templates=
 fail=
-for pkg in "$@" ; do
-	if [ -f "srcpkgs/$pkg/template" ] ; then
+for pkg; do
+	if [ -f "srcpkgs/$pkg/template" ]; then
 		t="srcpkgs/$pkg/template"
-	elif [ -f "$pkg/template" ] ; then
+	elif [ -f "$pkg/template" ]; then
 		t="$pkg/template"
-	elif [ -f "$pkg" ] ; then
+	elif [ -f "$pkg" ]; then
 		t="$pkg"
+	elif [ -f "$pkg/template" ]; then
+		t="$pkg/template"
 	else
-		printf 'ERROR: could not find template for: %s\n' "$pkg" 2>&1
-		fail=1
-		continue
+		printf 'FAIL: no template found for: %s\n' "$pkg" >&2
+		fail=y
 	fi
 	templates="$templates $t"
 done
-[ -n "$fail" ] && exit 1
+[ -n "$templates" ] && [ -z "$fail" ] || exit 1
+
+# prepare env
+export XBPS_MASTERDIR="./masterdir.xxtools"
+export XBPS_HOSTDIR="./hostdir.xxtools"
+./xbps-src binary-bootstrap
 
 # patch templates
-for t in $templates ; do
+fail=0
+for t in $templates; do
 	pkg="$(printf '%s' "$t" | cut -d/ -f2)"
 	oldversion="$(./xbps-src show "$pkg" | grep version | cut -f2)"
+	oldchecksum="$(./xbps-src show "$pkg" | grep checksum | cut -f2)"
 	newversion="$(./xbps-src update-check "$pkg" | sort | tail -n1 | cut -d' ' -f3 | sed "s/${pkg}-//")"
-	[ -z "$newversion" ] && continue
 
-	printf -- 'Updating package: %s %s -> %s' "$pkg" "$oldversion" "$newversion"
+	: "${newversion:="$oldversion"}"
+	if [ "$newversion" = "$oldversion" ] && [ -n "$oldchecksum" ]; then
+		printf 'SKIP: %s (no new version)\n' "$pkg" >&2
+		continue
+	fi
+
+	./xbps-src -C clean "$pkg"
+
+	printf -- 'Updating package: %s %s -> %s' "$pkg" "$oldversion" "$newversion" >&2
+	md5_pre="$(md5sum "$t")"
 	sed -i "$t" \
 		-e "/^revision=/s/=.*/=1/" \
 		-e "/^version=/s/=.*/=$newversion/"
-	xgensum -i "$t" >/dev/null 2>&1 && \
-	printf -- ' ok\n' || \
-		printf -- ' failed\n'
+	md5_post="$(md5sum "$t")"
+
+	if [ "$md5_pre" = "$md5_post" ]; then
+		printf 'FAIL: Template remains unchanged: %s\n' "$pkg" >&2
+	elif ! xgensum -i "$t" >/dev/null 2>&1; then
+		printf 'FAIL: Unable to set new checksum: %s\n' "$pkg" >&2
+	else
+		printf ' OK\n' >&2
+		printf '%s\n' "$pkg"
+		continue
+	fi
+	fail=1
 done
+
+exit $fail
