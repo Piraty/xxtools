@@ -4,6 +4,9 @@
 # stdout: list of successfully bumped packages
 # stderr: auxiliary information about the bumping process
 
+: "${XBPS_HOSTDIR:="$HOME/.cache/xxtools/hostdir"}"
+: "${XBPS_MASTERDIR:="$(pwd)/masterdir.xxtools"}"
+
 cd "$(xdistdir)" || exit 1
 
 # ensure all templates exist
@@ -27,8 +30,8 @@ done
 [ -n "$templates" ] && [ -z "$fail" ] || exit 1
 
 # prepare env
-export XBPS_MASTERDIR="./masterdir.xxtools"
-export XBPS_HOSTDIR="./hostdir.xxtools"
+export XBPS_MASTERDIR
+export XBPS_HOSTDIR
 ./xbps-src binary-bootstrap
 
 # patch templates

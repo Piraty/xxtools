@@ -1,6 +1,11 @@
 #!/bin/sh
 # xxbuild [flags] [pkgs..] - build packages for a pre-defined set of archs
 
+: "${XBPS_HOSTDIR:="$HOME/.cache/xxtools/hostdir"}"
+: "${XBPS_MASTERDIR:="$(pwd)/masterdir.xxtools"}"
+
+cd "$(xdistdir)" || exit 1
+
 can_build_natively_for_arch() {
 	arch="$1"
 	native=
@@ -24,9 +29,6 @@ _xbps_src() {
 	./xbps-src $xbps_src_flags "$*"
 }
 
-: "${XBPS_HOSTDIR:="$HOME/.cache/xxbuild/hostdir"}"
-: "${XBPS_MASTERDIR:="$(pwd)/masterdir.xxbuild"}"
-
 xbps_src_flags=
 xxbuild_force=
 pkgs=
@@ -39,8 +41,6 @@ for arg; do
 	xbps_src_flags="$xbps_src_flags $arg"
 	shift
 done
-
-cd "$(xdistdir)" || exit 1
 
 if [ "$#" = "0" ]; then
 	# if no packages are given, build changed templates commited on this branch
