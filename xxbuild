@@ -19,6 +19,11 @@ can_build_natively_for_arch() {
 	[ "$native" = "y" ] && return 0 || return 1
 }
 
+_xbps_src() {
+	#shellcheck disable=SC2086
+	./xbps-src $xbps_src_flags "$*"
+}
+
 : "${XBPS_HOSTDIR:="$HOME/.cache/xxbuild/hostdir"}"
 : "${XBPS_MASTERDIR:="$(pwd)/masterdir.xxbuild"}"
 
@@ -50,9 +55,9 @@ mkdir -p "$XBPS_HOSTDIR" "$XBPS_MASTERDIR"
 export XBPS_HOSTDIR
 export XBPS_MASTERDIR
 
-./xbps-src binary-bootstrap
-./xbps-src clean
-./xbps-src bootstrap-update
+_xbps_src binary-bootstrap
+_xbps_src clean
+_xbps_src bootstrap-update
 
 # clean binpkgs, to not spoil the result by reusing prebuilt packages
 if [ -n "$xxbuild_force" ]; then
@@ -76,7 +81,7 @@ for arch in \
 	# rebuild masterdir for native archs
 	if [ "$(cat "$XBPS_MASTERDIR/.xbps_chroot_init")" != "$master_arch" ]; then
 		rm -rf "$XBPS_MASTERDIR"
-		./xbps-src binary-bootstrap "$master_arch"
+		_xbps_src binary-bootstrap "$master_arch"
 	fi
 
 	# mimic xbulk, but check exit code to not fail on broken/nocross
@@ -84,8 +89,7 @@ for arch in \
 	for pkg in $(./xbps-src sort-dependencies "$pkgs"); do
 		(
 			set -x
-			#shellcheck disable=SC2086
-			./xbps-src $xbps_src_flags $xbps_src_cross_flags pkg "$pkg"
+			_xbps_src "$xbps_src_cross_flags" pkg "$pkg"
 		)
 		ret=$?
 
