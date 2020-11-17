@@ -87,10 +87,7 @@ for arch in \
 	# mimic xbulk, but check exit code to not fail on broken/nocross
 	# `xbulk $xbps_src_flags -f $cross $(./xbps-src sort-dependencies $@)`
 	for pkg in $(./xbps-src sort-dependencies "$pkgs"); do
-		(
-			set -x
-			_xbps_src "$xbps_src_cross_flags" pkg "$pkg"
-		)
+		_xbps_src "$xbps_src_cross_flags" pkg "$pkg"
 		ret=$?
 
 		case "$ret" in
