@@ -45,7 +45,6 @@ append_summary() {
 xbps_src_flags=
 xxbuild_force=
 xxbuild_keep_going=
-pkgs=
 for arg; do
 	case "$arg" in
 		-f) xxbuild_force=y ;;
@@ -67,8 +66,29 @@ if [ "$#" = "0" ]; then
 	common/travis/changed_templates.sh &&
 		set -- "$(cat /tmp/templates)"
 fi
-pkgs="$*"
+
+# ensure all templates exist
+fail=
+pkgs=
+for pkg; do
+	if [ -f "srcpkgs/$pkg/template" ]; then
+		t="srcpkgs/$pkg/template"
+	elif [ -f "$pkg/template" ]; then
+		t="$pkg/template"
+	elif [ -f "$pkg" ]; then
+		t="$pkg"
+	else
+		printf 'FAIL: no template found for: %s\n' "$pkg" >&2
+		fail=y
+		continue
+	fi
+	pkgs="$pkgs $(printf '%s' "$t" | cut -d'/' -f2)"
+done
+[ -z "$fail" ] || exit 1
 [ -n "$pkgs" ] || exit 1
+
+#shellcheck disable=SC2086
+printf 'Building: %s\n' $pkgs
 
 mkdir -p "$XBPS_HOSTDIR" "$XBPS_MASTERDIR"
 export XBPS_HOSTDIR
