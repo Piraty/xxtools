@@ -103,8 +103,9 @@ fi
 bailout=
 for arch in \
 	"x86_64" "x86_64-musl" "i686" \
-	"aarch64-musl" \
-	"armv7l-musl" "armv6l-musl"; do
+	"aarch64-musl" "aarch64" \
+	"armv7l-musl" "armv7l" \
+	"armv6l-musl" "armv6l"; do
 
 	if can_build_natively_for_arch "$arch"; then
 		cross=n
