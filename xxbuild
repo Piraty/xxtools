@@ -95,10 +95,6 @@ mkdir -p "$XBPS_HOSTDIR" "$XBPS_MASTERDIR"
 export XBPS_HOSTDIR
 export XBPS_MASTERDIR
 
-_xbps_src binary-bootstrap
-_xbps_src clean
-_xbps_src bootstrap-update
-
 # clean binpkgs, to not spoil the result by reusing prebuilt packages
 if [ -n "$xxbuild_force" ]; then
 	rm -rf "$XBPS_HOSTDIR/binpkgs"
@@ -119,10 +115,20 @@ for arch in \
 		master_arch="${XXBUILD_HOSTARCH_FOR_CROSS:-"$(xbps-uhelper arch)"}"
 		xbps_src_cross_flags="-a $arch"
 	fi
-	# rebuild masterdir for native archs
-	if [ "$(cat "$XBPS_MASTERDIR/.xbps_chroot_init")" != "$master_arch" ]; then
+
+	# masterdir is not fully populated
+	if [ ! -s "$XBPS_MASTERDIR/.xbps_chroot_init" ]; then
 		rm -rf "$XBPS_MASTERDIR"
+	# ensure native build if possible
+	elif [ "$(cat "$XBPS_MASTERDIR/.xbps_chroot_init")" != "$master_arch" ]; then
+		rm -rf "$XBPS_MASTERDIR"
+	fi
+
+	if [ ! -d "$XBPS_MASTERDIR" ]; then
 		_xbps_src binary-bootstrap "$master_arch"
+	else
+		_xbps_src clean
+		_xbps_src bootstrap-update
 	fi
 
 	# mimic xbulk, but check exit code to not fail on broken/nocross
