@@ -29,6 +29,16 @@ _xbps_src() {
 	./xbps-src $xbps_src_flags "$*"
 }
 
+summary="$(printf '\n%s\n' "SUMMARY")"
+append_summary() {
+	pkg="$1"
+	host_arch="$2"
+	target_arch="$3"
+	cross="$4"
+	result="$5"
+	summary="$(printf '%s\n' "$summary" "pkg:${pkg} host:${host_arch} target:${target_arch} cross:${cross} result:${result}")"
+}
+
 xbps_src_flags=
 xxbuild_force=
 xxbuild_keep_going=
@@ -97,18 +107,25 @@ for arch in \
 		_xbps_src "$xbps_src_cross_flags" pkg "$pkg"
 		ret=$?
 
+		result=
 		case "$ret" in
-			0) : ;;
-			2) : ;; # nocross, broken, no match in `archs=`
+			0)
+				result="OK"
+				;;
+			2) # nocross, broken or no match in `archs=`
+				result="SKIPPED"
+				;;
 			*)
-				printf '%s\n' \
-					"+++" \
-					"FAILED TO BUILD: $pkg (${arch}, cross:${cross})" \
-					"+++" >&2
+				result="FAILED"
 				[ -n "$xxbuild_keep_going" ] || bailout=y
 				;;
 		esac
+		append_summary "$pkg" "$master_arch" "$arch" "$cross" "$result"
+
 		[ -z "$bailout" ] || break
 	done
 	[ -z "$bailout" ] || break
 done
+
+echo "$summary"
+exit $ret
