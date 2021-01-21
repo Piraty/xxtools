@@ -31,10 +31,16 @@ _xbps_src() {
 
 xbps_src_flags=
 xxbuild_force=
+xxbuild_keep_going=
 pkgs=
 for arg; do
 	case "$arg" in
 		-f) xxbuild_force=y ;;
+		-k) # make build failure non-fatal
+			xxbuild_keep_going=y
+			shift
+			continue
+			;;
 		-*) : ;;
 		*) break ;;
 	esac
@@ -64,6 +70,7 @@ if [ -n "$xxbuild_force" ]; then
 	rm -rf "$XBPS_HOSTDIR/binpkgs"
 fi
 
+bailout=
 for arch in \
 	"x86_64" "x86_64-musl" "i686" \
 	"aarch64-musl" \
@@ -98,8 +105,10 @@ for arch in \
 					"+++" \
 					"FAILED TO BUILD: $pkg (${arch}, cross:${cross})" \
 					"+++" >&2
-				exit $ret
+				[ -n "$xxbuild_keep_going" ] || bailout=y
 				;;
 		esac
+		[ -z "$bailout" ] || break
 	done
+	[ -z "$bailout" ] || break
 done
