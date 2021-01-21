@@ -48,7 +48,9 @@ xxbuild_force=
 xxbuild_keep_going=
 for arg; do
 	case "$arg" in
-		-f) xxbuild_force=y ;;
+		-f) # clean binpkgs before build
+			xxbuild_force=y
+			;;
 		-k) # make build failure non-fatal
 			xxbuild_keep_going=y
 			shift
