@@ -3,7 +3,7 @@
 
 : "${XBPS_HOSTDIR:="$HOME/.cache/xxtools/hostdir"}"
 : "${XBPS_MASTERDIR:="$(pwd)/masterdir.xxtools"}"
-: "${XXBUILD_HOSTARCH_FOR_CROSS:="$(uname -m)"}"
+: "${XXBUILD_HOSTARCH:="$(uname -m)"}"
 
 cd "$(xdistdir)" || exit 1
 
@@ -115,7 +115,7 @@ for arch in \
 		xbps_src_cross_flags=
 	else
 		cross=y
-		master_arch="${XXBUILD_HOSTARCH_FOR_CROSS:-"$(xbps-uhelper arch)"}"
+		master_arch="${XXBUILD_HOSTARCH:-"$(xbps-uhelper arch)"}"
 		xbps_src_cross_flags="-a $arch"
 	fi
 
