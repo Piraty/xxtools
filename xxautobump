@@ -58,9 +58,9 @@ for t in $templates; do
 	md5_post="$(md5sum "$t")"
 
 	if [ "$md5_pre" = "$md5_post" ]; then
-		printf 'FAIL: Template remains unchanged: %s\n' "$pkg" >&2
+		printf ' FAIL: Template remains unchanged: %s\n' "$pkg" >&2
 	elif ! xgensum -i "$t" >/dev/null 2>&1; then
-		printf 'FAIL: Unable to set new checksum: %s\n' "$pkg" >&2
+		printf ' FAIL: Unable to set new checksum: %s\n' "$pkg" >&2
 	else
 		printf ' OK\n' >&2
 		printf '%s\n' "$pkg"
