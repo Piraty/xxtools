@@ -40,7 +40,7 @@ for t in $templates; do
 	pkg="$(printf '%s' "$t" | cut -d/ -f2)"
 	oldversion="$(./xbps-src show "$pkg" | grep version | cut -f2)"
 	oldchecksum="$(./xbps-src show "$pkg" | grep checksum | cut -f2)"
-	newversion="$(./xbps-src update-check "$pkg" | sort | tail -n1 | cut -d' ' -f3 | sed "s/${pkg}-//")"
+	newversion="$(./xbps-src update-check "$pkg" | cut -d' ' -f3 | sort -V | tail -n1 | sed "s/${pkg}-//")"
 
 	: "${newversion:="$oldversion"}"
 	if [ "$newversion" = "$oldversion" ] && [ -n "$oldchecksum" ]; then
