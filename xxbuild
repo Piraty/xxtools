@@ -1,9 +1,10 @@
 #!/bin/sh
 # xxbuild [flags] [pkgs..] - build packages for a pre-defined set of archs
 
+: "${XXBUILD_ARCHS:="x86_64 x86_64-musl i686 aarch64-musl aarch64 armv7l-musl armv7l armv6l-musl armv6l"}"
 : "${XBPS_HOSTDIR:="$HOME/.cache/xxtools/hostdir"}"
 : "${XBPS_MASTERDIR:="$(pwd)/masterdir.xxtools"}"
-: "${XXBUILD_HOSTARCH:="$(uname -m)"}"
+: "${XXBUILD_HOSTARCH:="$(xbps-uhelper arch || uname -m)"}"
 
 cd "$(xdistdir)" || exit 1
 
@@ -103,11 +104,7 @@ if [ -n "$xxbuild_force" ]; then
 fi
 
 bailout=
-for arch in \
-	"x86_64" "x86_64-musl" "i686" \
-	"aarch64-musl" "aarch64" \
-	"armv7l-musl" "armv7l" \
-	"armv6l-musl" "armv6l"; do
+for arch in $XXBUILD_ARCHS; do
 
 	if can_build_natively_for_arch "$arch"; then
 		cross=n
@@ -115,7 +112,7 @@ for arch in \
 		xbps_src_cross_flags=
 	else
 		cross=y
-		master_arch="${XXBUILD_HOSTARCH:-"$(xbps-uhelper arch)"}"
+		master_arch="$XXBUILD_HOSTARCH"
 		xbps_src_cross_flags="-a $arch"
 	fi
 

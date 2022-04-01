@@ -6,7 +6,7 @@ xtools does.
 
 * `xxadopt [-f] PKG..` - adopt packages
 * `xxautobump PKG..` - perform trivial updates on given templates
-* `xxbuild [flags] [pkgs..]` - build packages for a pre-defined set of archs
+* `xxbuild [flags] [pkgs..]` - build packages for many archs
 
 ## Examples
 ### Bump all packages you maintain automatically and build them
