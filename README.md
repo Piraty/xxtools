@@ -8,6 +8,10 @@ xtools does.
 * `xxbuild [flags] [pkgs..]` - build packages for many archs
 * `xxcheckorphans` - update-check installed packages that no ones looks after
 
+## License
+
+[0BSD](https://spdx.org/licenses/0BSD.html), see [LICENSE](./LICENSE).
+
 ## References
 
 * https://github.com/void-linux/void-packages
