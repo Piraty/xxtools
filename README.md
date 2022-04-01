@@ -6,6 +6,7 @@ xtools does.
 * `xxadopt [-f] PKG..` - adopt packages
 * `xxautobump PKG..` - perform trivial updates on given templates
 * `xxbuild [flags] [pkgs..]` - build packages for many archs
+* `xxcheckorphans` - update-check installed packages that no ones looks after
 
 ## References
 
