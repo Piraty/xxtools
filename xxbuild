@@ -3,7 +3,7 @@
 
 : "${XXBUILD_ARCHS:="x86_64 x86_64-musl i686 aarch64-musl aarch64 armv7l-musl armv7l armv6l-musl armv6l"}"
 : "${XBPS_HOSTDIR:="$HOME/.cache/xxtools/hostdir"}"
-: "${XBPS_MASTERDIR:="$(pwd)/masterdir.xxtools"}"
+: "${XBPS_MASTERDIR:="$(xdistdir)/masterdir.xxtools"}"
 : "${XXBUILD_HOSTARCH:="$(xbps-uhelper arch || uname -m)"}"
 
 cd "$(xdistdir)" || exit 1
@@ -120,16 +120,12 @@ for arch in $XXBUILD_ARCHS; do
 	if [ ! -s "$XBPS_MASTERDIR/.xbps_chroot_init" ]; then
 		rm -rf "$XBPS_MASTERDIR"
 	# ensure native build if possible
-	elif [ "$(cat "$XBPS_MASTERDIR/.xbps_chroot_init")" != "$master_arch" ]; then
+	elif [ "$(cat "$XBPS_MASTERDIR/.xbps_chroot_init" 2>/dev/null)" != "$master_arch" ]; then
 		rm -rf "$XBPS_MASTERDIR"
 	fi
 
-	if [ ! -d "$XBPS_MASTERDIR" ]; then
-		_xbps_src binary-bootstrap "$master_arch"
-	else
-		_xbps_src clean
-		_xbps_src bootstrap-update
-	fi
+	_xbps_src zap
+	_xbps_src binary-bootstrap "$master_arch"
 
 	# mimic xbulk, but check exit code to not fail on broken/nocross
 	# `xbulk $xbps_src_flags -f $cross $(./xbps-src sort-dependencies $@)`
