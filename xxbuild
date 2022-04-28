@@ -8,22 +8,25 @@
 
 cd "$(xdistdir)" || exit 1
 
-can_build_natively_for_arch() {
-	arch="$1"
-	native=
-	case "$(uname -m)" in
+target_arch_can_run_natively() {
+	#TODO: ppc
+	target_arch="$1"
+	host_arch="$(uname -m)"
+	case "$host_arch" in
 		x86_64)
-			case "$arch" in
-				i686* | x86_64*) native=y ;;
+			case "$target_arch" in
+				i686*) return 0 ;;
+				x86_64*) return 0 ;;
 			esac
 			;;
 		aarch64)
-			case "$arch" in
-				armv7* | aarch64*) native=y ;;
+			case "$target_arch" in
+				armv7*) return 0 ;;
+				aarch64*) return 0 ;;
 			esac
 			;;
 	esac
-	[ "$native" = "y" ] && return 0 || return 1
+	return 1
 }
 
 _xbps_src() {
@@ -104,16 +107,16 @@ if [ -n "$xxbuild_force" ]; then
 fi
 
 bailout=
-for arch in $XXBUILD_ARCHS; do
+for target_arch in $XXBUILD_ARCHS; do
 
-	if can_build_natively_for_arch "$arch"; then
+	if target_arch_can_run_natively "$target_arch"; then
 		cross=n
-		master_arch="$arch"
+		master_arch="$target_arch"
 		xbps_src_cross_flags=
 	else
 		cross=y
 		master_arch="$XXBUILD_HOSTARCH"
-		xbps_src_cross_flags="-a $arch"
+		xbps_src_cross_flags="-a $target_arch"
 	fi
 
 	# masterdir is not fully populated
@@ -146,7 +149,7 @@ for arch in $XXBUILD_ARCHS; do
 				[ -n "$xxbuild_keep_going" ] || bailout=y
 				;;
 		esac
-		append_summary "$pkg" "$master_arch" "$arch" "$cross" "$result"
+		append_summary "$pkg" "$master_arch" "$target_arch" "$cross" "$result"
 
 		[ -z "$bailout" ] || break
 	done
