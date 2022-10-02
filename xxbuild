@@ -71,7 +71,7 @@ if [ "$#" = "0" ]; then
 	# if no packages are given, build changed templates commited on this branch
 	rm -f /tmp/templates
 	common/travis/changed_templates.sh &&
-		set -- "$(cat /tmp/templates)"
+		set -- $(cat /tmp/templates)
 fi
 
 # ensure all templates exist
