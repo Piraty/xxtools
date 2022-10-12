@@ -33,7 +33,7 @@ _xbps_src() {
 	(
 		set -x
 		#shellcheck disable=SC2086
-		./xbps-src $xbps_src_flags "$*"
+		./xbps-src $xbps_src_flags "$@"
 	)
 }
 
