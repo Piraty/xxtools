@@ -131,7 +131,7 @@ for target_arch in $XXBUILD_ARCHS; do
 	_xbps_src binary-bootstrap "$master_arch"
 
 	# mimic xbulk, but check exit code to not fail on broken/nocross
-	# `xbulk $xbps_src_flags -f $cross $(./xbps-src sort-dependencies $@)`
+	# `xbulk $xbps_src_flags -f $xbps_src_cross_flags $(./xbps-src sort-dependencies $@)`
 	for pkg in $(./xbps-src sort-dependencies "$pkgs"); do
 		_xbps_src "$xbps_src_cross_flags" pkg "$pkg"
 		ret=$?
