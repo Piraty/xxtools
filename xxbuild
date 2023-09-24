@@ -1,5 +1,5 @@
 #!/bin/sh
-# xxbuild [flags] [pkgs..] - build packages for a pre-defined set of archs
+# xxbuild [flags] PKG.. - build packages for a pre-defined set of archs
 # set NO_COLUMN and/or NO_COLOR for easier-to-parse output
 
 : "${XXBUILD_ARCHS:="x86_64 x86_64-musl i686 aarch64-musl aarch64 armv7l-musl armv7l armv6l-musl armv6l"}"
