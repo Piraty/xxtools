@@ -5,7 +5,7 @@
 : "${XXBUILD_ARCHS:="x86_64 x86_64-musl i686 aarch64-musl aarch64 armv7l-musl armv7l armv6l-musl armv6l"}"
 : "${XBPS_HOSTDIR:="$HOME/.cache/xxtools/hostdir"}"
 : "${XBPS_MASTERDIR:="$(xdistdir)/masterdir.xxtools"}"
-: "${XXBUILD_HOSTARCH:="$(xbps-uhelper arch || uname -m)"}"
+: "${XXBUILD_HOSTARCH:="$(uname -m)"}"
 
 if [ -z "$NO_COLUMN" ] && command -v column >/dev/null; then
 	COLUMN="column -ts:"
@@ -142,7 +142,10 @@ for target_arch in $XXBUILD_ARCHS; do
 		xbps_src_cross_flags=
 	else
 		cross=y
-		master_arch="$XXBUILD_HOSTARCH"
+		case "$target_arch" in
+			*-musl) master_arch="${XXBUILD_HOSTARCH}-musl" ;;
+			*) master_arch="${XXBUILD_HOSTARCH}" ;;
+		esac
 		xbps_src_cross_flags="-a $target_arch"
 	fi
 
