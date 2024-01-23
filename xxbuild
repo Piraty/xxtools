@@ -160,7 +160,7 @@ for target_arch in $XXBUILD_ARCHS; do
 	fi
 
 	_xbps_src zap
-	_xbps_src binary-bootstrap "$master_arch"
+	_xbps_src -A "$master_arch" binary-bootstrap
 
 	# mimic xbulk, but check exit code to not fail on broken/nocross
 	# `xbulk $xbps_src_flags -f $xbps_src_cross_flags $(./xbps-src sort-dependencies $@)`
