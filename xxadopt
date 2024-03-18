@@ -1,24 +1,32 @@
 #!/bin/sh
-# xxadopt [-f] PKG.. - adopt packages
+# xxadopt [-f|-o] PKG.. - adopt packages
+#
+# -f : (force) adopt even if it's not orphaned
+# -o : orphan the package
 
-[ "$1" = "-f" ] && _force=1 && shift || _force=0
+set -eu
 
-if [ "$#" -lt 1 ] ; then
-	printf 'Usage: %s [-f] PKG..\n' "$(basename "$0")" >&2
-	exit 1
+_force=
+_orphan=
+if [ "$1" = "-f" ]; then
+	_force=1
+	shift
+elif [ "$1" = "-o" ]; then
+	_orphan=1
+	shift
 fi
 
-cd "$(xdistdir)" || exit 1
+cd "$(xdistdir)"
 
 # make sure all templates exist
 templates=
 fail=
-for pkg in "$@" ; do
-	if [ -f "srcpkgs/$pkg/template" ] ; then
+for pkg in "$@"; do
+	if [ -f "srcpkgs/$pkg/template" ]; then
 		t="srcpkgs/$pkg/template"
-	elif [ -f "$pkg/template" ] ; then
+	elif [ -f "$pkg/template" ]; then
 		t="$pkg/template"
-	elif [ -f "$pkg" ] ; then
+	elif [ -f "$pkg" ]; then
 		t="$pkg"
 	else
 		printf 'ERROR: could not find template for: %s\n' "$pkg" 2>&1
@@ -29,21 +37,27 @@ for pkg in "$@" ; do
 done
 [ -n "$fail" ] && exit 1
 
+if [ "$_orphan" ]; then
+	new_maintainer="Orphaned <orphan@voidlinux.org>"
+else
+	new_maintainer="$(git config user.name) <$(git config user.email)>"
+fi
+
 # patch templates
-for t in $templates ; do
+for t in $templates; do
 	pkg="$(printf '%s' "$t" | cut -d/ -f2)"
 
-	if [ "$_force" = "0" ] && ! grep -q -i "^maintainer=.*orphan@voidlinux.*" "$t" ; then
-		printf -- 'Skipping package (not orphaned): %s\n' "$pkg" >&2
+	if [ -z "$_force" ] && [ -z "$_orphan" ] && ! grep -q -i "^maintainer=.*orphan@voidlinux.*" "$t"; then
+		printf -- 'Skip package (not orphaned): %s\n' "$pkg" >&2
 		continue
 	fi
 
 	hash_pre="$(md5sum "$t")"
 	sed -i "$t" \
-		-e "/^maintainer=/s/=.*/=\"$(git config user.name) <$(git config user.email)>\"/"
+		-e "/^maintainer=/s/=.*/=\"${new_maintainer}\"/"
 	hash_post="$(md5sum "$t")"
 
-	[ "$hash_pre" != "$hash_post" ] && \
-		printf -- 'Package adopted: %s\n' "$pkg" || \
-			printf -- 'Package remains unchanged: %s\n' "$pkg" >&2
+	[ "$hash_pre" != "$hash_post" ] &&
+		printf -- 'Changed: %s (%s)\n' "$pkg" "$new_maintainer" ||
+		printf -- 'Unchanged: %s\n' "$pkg" >&2
 done
