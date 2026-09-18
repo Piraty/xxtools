@@ -1,0 +1,6 @@
+#!/bin/sh
+
+: "${XBPS_HOSTDIR:="$HOME/.cache/xxtools/hostdir"}"
+export XBPS_HOSTDIR
+
+exec xi "$@"
